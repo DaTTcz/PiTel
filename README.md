@@ -3,11 +3,6 @@
 **Dial-up server na Raspberry Pi.** Raspberry Pi s modemem hovor zvedne, naváže PPP spojení a pošle volajícího přes
 NAT do LAN a na internet. Jako u poskytovatele internetu v 90. letech.
 
-```
-[PC + modem] ── telefon / VoIP ATA ── ústředna ── [modem MT5634ZBA] ── USB ── [Raspberry Pi] ── LAN ── internet
-                                                                          mgetty → pppd → NAT
-```
-
 PiTel nic neprogramuje znovu. Spojuje osvědčené nástroje (**mgetty**, **pppd**,
 **nftables**) a přidává k nim:
 
