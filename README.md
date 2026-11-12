@@ -1,3 +1,5 @@
+# PiTel ☎
+
 <p align="center">
   <a href="https://www.paypal.com/paypalme/DaTTcz">
     <img src="https://img.shields.io/badge/%E2%9D%A4%EF%B8%8F_Podpo%C5%99_projekt-PayPal-ffc439?style=for-the-badge&logo=paypal&logoColor=ffc439&labelColor=003087" alt="Podpořit přes PayPal">
@@ -7,8 +9,6 @@
     <img src="https://img.shields.io/badge/%E2%98%95_Ko--fi-dattcz-ff5e5b?style=for-the-badge&logo=ko-fi&logoColor=white" alt="Podpořit na Ko-fi">
   </a>
 </p>
-
-# PiTel ☎
 
 **Dial-up server na Raspberry Pi.** Raspberry Pi s modemem hovor zvedne, naváže PPP spojení a pošle volajícího přes
 NAT do LAN a na internet. Jako u poskytovatele internetu v 90. letech.
