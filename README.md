@@ -1,7 +1,6 @@
 # PiTel ☎
 
-**Dial-up server na Raspberry Pi.** Starý počítač se svým modemem vytočí číslo,
-Raspberry Pi s modemem hovor zvedne, naváže PPP spojení a pošle volajícího přes
+**Dial-up server na Raspberry Pi.** Raspberry Pi s modemem hovor zvedne, naváže PPP spojení a pošle volajícího přes
 NAT do LAN a na internet. Jako u poskytovatele internetu v 90. letech.
 
 ```
@@ -25,7 +24,6 @@ Je napsaný v Pythonu jen se standardní knihovnou, takže nepotřebuje pip ani 
 
 - Raspberry Pi (testováno pro Pi 2) s **Raspberry Pi OS Lite** (32bit stačí)
 - USB modem, který se ukáže jako `/dev/ttyACM0` nebo `/dev/ttyUSB0`
-  (např. MultiTech MT5634ZBA-USB)
 - připojení Raspberry Pi do LAN kabelem (`eth0`)
 - telefonní linka do modemu: analogová pobočka ústředny nebo VoIP převodník (ATA)
 
@@ -67,27 +65,14 @@ Ve webu: **Systém → Stáhnout a nainstalovat aktualizaci**, nebo v konzoli:
 sudo pitel update
 ```
 
-PiTel hledá nové verze podle **git tagů** ve tvaru `v1.2.3`. Web se na GitHub podívá po
+PiTel hledá nové verze na GitHub, podívá po
 startu a pak každých 6 hodin. Když najde vyšší verzi, ukáže vedle čísla verze žlutý odznak
 `⬆ v1.2.3` a nová verze se objeví i v `pitel status`. Ručně se dá zkontrolovat tlačítkem
 **Zkontrolovat teď** nebo příkazem `pitel update --check`.
 
 Aktualizace stáhne tagy a přepne se na nejvyšší z nich, znovu vygeneruje konfiguraci a
 restartuje služby. Probíhající hovor se nepřeruší, mgetty se v takovém případě restartuje
-až po zavěšení. V Nastavení jde přepnout na „poslední commit z větve“ (pro testování).
-
-### Vydání nové verze
-
-1. Uprav `__version__` v `pitel/__init__.py` (např. `0.2.0`), commitni a pushni.
-2. Vytvoř tag a pushni ho:
-   ```bash
-   git tag v0.2.0
-   git push origin v0.2.0
-   ```
-   V GitKrakenu: pravým tlačítkem na commit → *Create tag here* → `v0.2.0`,
-   pak pravým na tag → *Push v0.2.0 to origin*.
-
-Commity bez tagu se na Raspberry Pi nedostanou, dokud je nevydáš.
+až po zavěšení.
 
 ## Příkaz `pitel`
 
@@ -152,31 +137,3 @@ Nastavení VoIP převodníku (ATA) na obou stranách:
 1. *Ovládací panely → Centrum síťových připojení → Nastavit nové připojení → Připojit k internetu → Telefonické připojení*
 2. Číslo, jméno a heslo podle uživatele v PiTelu.
 3. Ve vlastnostech připojení, záložka *Zabezpečení*, povol CHAP / MS-CHAP v2 (nebo PAP).
-
-**Test linky bez PPP:** v terminálu (HyperTerminal, PuTTY na COM port) vytoč `ATDT číslo`.
-Po `CONNECT` napiš cokoliv na výzvu `login:`, spustí se testovací echo, které vrací napsaný text.
-
-## Řešení problémů
-
-- **Modem nenalezen** → `lsusb`, `dmesg | grep tty`, zkontroluj zařízení v Nastavení.
-- **Zvoní, ale nic** → `pitel logs`, zkus `sudo pitel modem ATI0` (modem odpovídá?).
-- **Spojí, ale padá** → sniž max. rychlost (14400 → 9600), zkontroluj nastavení ATA.
-- **„Klient se neověřil“** → jméno/heslo, ve Windows povol PAP/CHAP.
-- **Připojeno, ale nejde internet** → `sudo nft list table ip pitel`,
-  `sysctl net.ipv4.ip_forward`, rozhraní do LAN v Nastavení.
-
-## Vývoj
-
-Bez Raspberry Pi jde všechno zkoušet v „testovacím kořeni“. Systémové příkazy se jen vypíšou:
-
-```bash
-export PITEL_PREFIX=/tmp/fakeroot
-mkdir -p $PITEL_PREFIX/dev && touch $PITEL_PREFIX/dev/ttyACM0
-bin/pitel admin-password          # heslo do webu
-bin/pitel config set web_port 8080
-bin/pitel web     # http://localhost:8080/
-```
-
-## Licence
-
-MIT
