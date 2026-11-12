@@ -1,0 +1,24 @@
+#!/bin/sh
+# Spouští ho mgetty (login.config, /AutoPPP/), když volající začne mluvit PPP.
+# Uloží informace o hovoru, spustí pppd a po skončení zapíše záznam do historie.
+# mgetty předává v prostředí CONNECT (např. "14400/V32B/LAPM") a CALLER_ID.
+
+APP=$(dirname "$(dirname "$(readlink -f "$0")")")
+STATE=/run/pitel
+mkdir -p "$STATE"
+
+{
+  printf 'PID=%s\n' "$$"
+  printf 'STARTED=%s\n' "$(date +%s)"
+  printf 'CONNECT=%s\n' "$CONNECT"
+  printf 'CALLER_ID=%s\n' "$CALLER_ID"
+  printf 'DEVICE=%s\n' "$DEVICE"
+} > "$STATE/call.env"
+chmod 644 "$STATE/call.env"
+
+PPPD=$(command -v pppd || echo /usr/sbin/pppd)
+"$PPPD" file /etc/pitel/ppp-options
+RC=$?
+
+/usr/bin/python3 "$APP/libexec/call-done" "$RC" || true
+exit "$RC"

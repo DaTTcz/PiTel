@@ -1,0 +1,38 @@
+#!/usr/bin/python3
+# Volá ppp-wrapper po skončení pppd. Argument: návratový kód pppd.
+import os
+import sys
+import time
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+from pitel import paths  # noqa: E402
+from pitel.state import PPPD_EXIT  # noqa: E402
+from pitel.util import append_jsonl, read_env_file, read_json  # noqa: E402
+
+rc = int(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].lstrip("-").isdigit() else -1
+call = read_env_file(paths.CALL_ENV)
+last = read_json(paths.LAST_SESSION, {}) or read_json(paths.SESSION, {}) or {}
+now = int(time.time())
+started = int(call.get("STARTED") or now)
+
+append_jsonl(paths.CALLS, {
+    "started": started,
+    "ended": now,
+    "duration": now - started,
+    "connect": (call.get("CONNECT") or "").strip() or None,
+    "caller": (call.get("CALLER_ID") or "").strip() or None,
+    "user": last.get("peer"),
+    "remote_ip": last.get("remote"),
+    "connected": bool(last.get("remote")),
+    "connect_time": last.get("connect_time"),
+    "bytes_sent": last.get("bytes_sent", 0),
+    "bytes_rcvd": last.get("bytes_rcvd", 0),
+    "rc": rc,
+    "result": PPPD_EXIT.get(rc, f"pppd skončil s kódem {rc}"),
+})
+
+for f in (paths.CALL_ENV, paths.SESSION, paths.LAST_SESSION):
+    try:
+        os.unlink(f)
+    except FileNotFoundError:
+        pass

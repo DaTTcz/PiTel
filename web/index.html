@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PiTel – dial-up server</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<section id="login" class="hidden">
+  <form id="login-form" class="card login-card">
+    <h1><span class="logo">☎</span> PiTel</h1>
+    <p class="muted">Dial-up server na Raspberry Pi</p>
+    <input type="password" id="login-password" placeholder="Heslo do správy" autocomplete="current-password" autofocus>
+    <button type="submit">Přihlásit</button>
+    <p id="login-error" class="error"></p>
+  </form>
+</section>
+
+<div id="app" class="hidden">
+  <header>
+    <div class="brand"><span class="logo">☎</span> PiTel <span id="version" class="muted"></span>
+      <button id="upd-badge" class="chip upd hidden" title="Dostupná aktualizace"></button></div>
+    <nav id="tabs">
+      <button data-tab="overview" class="active">Přehled</button>
+      <button data-tab="calls">Historie</button>
+      <button data-tab="users">Uživatelé</button>
+      <button data-tab="settings">Nastavení</button>
+      <button data-tab="modem">Modem</button>
+      <button data-tab="logs">Logy</button>
+      <button data-tab="system">Systém</button>
+    </nav>
+    <button id="logout" class="ghost">Odhlásit</button>
+  </header>
+
+  <main>
+    <!-- PŘEHLED -->
+    <section data-pane="overview">
+      <div class="card line-card">
+        <div class="line-state">
+          <span id="phase-dot" class="dot"></span>
+          <div>
+            <div id="phase-label" class="phase">…</div>
+            <div id="phase-connect" class="muted mono"></div>
+          </div>
+        </div>
+        <div class="actions">
+          <button id="btn-hangup" class="danger" disabled>Zavěsit</button>
+          <button id="btn-restart" class="ghost">Restart mgetty</button>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="card stat"><div class="label">Doba hovoru</div><div id="st-duration" class="value mono">–</div></div>
+        <div class="card stat"><div class="label">Uživatel</div><div id="st-user" class="value">–</div><div id="st-ip" class="muted mono"></div></div>
+        <div class="card stat"><div class="label">↓ ke klientovi</div><div id="st-tx-rate" class="value mono">–</div><div id="st-tx" class="muted mono"></div></div>
+        <div class="card stat"><div class="label">↑ od klienta</div><div id="st-rx-rate" class="value mono">–</div><div id="st-rx" class="muted mono"></div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>Provoz</h2>
+          <div class="legend"><span class="sw tx"></span>ke klientovi <span class="sw rx"></span>od klienta <span class="muted">· posledních 5 minut</span></div>
+        </div>
+        <canvas id="chart" height="180"></canvas>
+      </div>
+
+      <div class="grid two">
+        <div class="card">
+          <h2>Systém</h2>
+          <table class="kv">
+            <tr><th>Modem</th><td id="sys-modem"></td></tr>
+            <tr><th>mgetty</th><td id="sys-mgetty"></td></tr>
+            <tr><th>NAT</th><td id="sys-nat"></td></tr>
+            <tr><th>Web</th><td id="sys-web"></td></tr>
+            <tr><th>Max. rychlost</th><td id="sys-speed"></td></tr>
+          </table>
+        </div>
+        <div class="card">
+          <h2>Statistika</h2>
+          <table class="kv">
+            <tr><th>Poslední hovor</th><td id="tot-last"></td></tr>
+            <tr><th>Hovorů celkem</th><td id="tot-calls"></td></tr>
+            <tr><th>Dnes</th><td id="tot-today"></td></tr>
+            <tr><th>Přeneseno celkem</th><td id="tot-bytes"></td></tr>
+            <tr><th>Čas spojení celkem</th><td id="tot-time"></td></tr>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- HISTORIE -->
+    <section data-pane="calls" class="hidden">
+      <div class="card">
+        <div class="card-head"><h2>Historie hovorů</h2><button id="calls-refresh" class="ghost">Obnovit</button></div>
+        <div class="table-wrap">
+          <table class="list">
+            <thead><tr><th>Začátek</th><th>Délka</th><th>Uživatel</th><th>Spojení</th><th class="r">↓ ke klientovi</th><th class="r">↑ od klienta</th><th>Výsledek</th></tr></thead>
+            <tbody id="calls-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- UŽIVATELÉ -->
+    <section data-pane="users" class="hidden">
+      <div class="card">
+        <h2>Uživatelé pro vytáčené připojení</h2>
+        <p class="muted">Tato jména a hesla se zadávají ve Windows v „Telefonickém připojení“. Fungují PAP, CHAP i MS-CHAPv2.</p>
+        <table class="list"><thead><tr><th>Jméno</th><th>Vytvořen</th><th>Heslo změněno</th><th></th></tr></thead><tbody id="users-body"></tbody></table>
+      </div>
+      <form id="user-form" class="card">
+        <h2>Přidat uživatele / změnit heslo</h2>
+        <div class="form-row">
+          <label>Jméno<input id="u-name" required pattern="[A-Za-z0-9._\-]{1,32}"></label>
+          <label>Heslo<input id="u-pass" required minlength="4"></label>
+          <button type="submit">Uložit</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- NASTAVENÍ -->
+    <section data-pane="settings" class="hidden">
+      <form id="cfg-form" class="card">
+        <h2>Modem a linka</h2>
+        <div class="form-grid">
+          <label>Zařízení modemu<input name="device" placeholder="ttyACM0"></label>
+          <label>Typ linky u Raspberry Pi<select name="line_type"></select></label>
+          <label>Max. rychlost modemu<select name="max_speed"></select></label>
+          <label>Zvednout po zazvonění<input name="rings" type="number" min="1" max="10"></label>
+          <label class="wide">Další AT příkazy při inicializaci (oddělit středníkem)<input name="extra_init" placeholder="např. ATS10=50;ATM0"></label>
+          <label class="wide check"><input name="terminal_test" type="checkbox"> Povolit testovací echo, když volající nepošle PPP (test linky z terminálu)</label>
+        </div>
+        <div class="muted small">Inicializace modemu: <span id="init-preview" class="mono"></span></div>
+
+        <h2>Síť pro dial-up klienta</h2>
+        <div class="form-grid">
+          <label>IP Raspberry Pi na PPP<input name="server_ip"></label>
+          <label>IP volajícího PC<input name="client_ip"></label>
+          <label>DNS servery (čárkou)<input name="dns"></label>
+          <label>Rozhraní do LAN<input name="wan_iface"></label>
+          <label>Odpojit při nečinnosti (s, 0 = nikdy)<input name="idle_timeout" type="number" min="0"></label>
+        </div>
+
+        <h2>Webová správa a aktualizace</h2>
+        <div class="form-grid">
+          <label>Port<input name="web_port" type="number" min="1" max="65535"></label>
+          <label>Adresa (0.0.0.0 = všude)<input name="web_bind"></label>
+          <label class="wide">GitHub repozitář<input name="repo_url" placeholder="https://github.com/…/PiTel.git"></label>
+          <label>Aktualizovat na<select name="update_channel">
+            <option value="tags">vydané verze (tagy v1.2.3)</option>
+            <option value="branch">poslední commit z větve</option></select></label>
+          <label>Větev<input name="branch"></label>
+        </div>
+        <div class="actions"><button type="submit">Uložit a použít</button></div>
+      </form>
+
+      <form id="pw-form" class="card">
+        <h2>Heslo do správy</h2>
+        <div class="form-row">
+          <label>Současné<input id="pw-old" type="password" required autocomplete="current-password"></label>
+          <label>Nové<input id="pw-new" type="password" required minlength="6" autocomplete="new-password"></label>
+          <button type="submit">Změnit</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- MODEM -->
+    <section data-pane="modem" class="hidden">
+      <div class="card">
+        <h2>Dotaz na modem</h2>
+        <p class="muted">Na chvíli zastaví mgetty, pošle AT příkazy a zase ho spustí. Během hovoru to nejde.</p>
+        <div class="form-row">
+          <label class="grow">AT příkazy (oddělit středníkem)<input id="modem-cmds" value="ATI0;ATI1;ATI3;ATI4;AT&amp;V"></label>
+          <button id="modem-run">Odeslat</button>
+        </div>
+        <div class="presets">
+          <span class="muted">Rychlé volby:</span>
+          <button class="chip" data-cmd="ATI0;ATI1;ATI3;ATI4;AT&amp;V">Identifikace</button>
+          <button class="chip" data-cmd="AT&amp;V">Konfigurace (AT&amp;V)</button>
+          <button class="chip" data-cmd="AT&amp;V1">Statistika posledního spojení (AT&amp;V1)</button>
+          <button class="chip" data-cmd="AT+MS?">Modulace (AT+MS?)</button>
+        </div>
+        <pre id="modem-out" class="console">–</pre>
+      </div>
+    </section>
+
+    <!-- LOGY -->
+    <section data-pane="logs" class="hidden">
+      <div class="card">
+        <div class="card-head"><h2>Logy mgetty a pppd</h2>
+          <div><label class="check inline"><input type="checkbox" id="logs-auto"> automaticky obnovovat</label>
+          <button id="logs-refresh" class="ghost">Obnovit</button></div></div>
+        <pre id="logs-out" class="console tall">–</pre>
+      </div>
+    </section>
+
+    <!-- SYSTÉM -->
+    <section data-pane="system" class="hidden">
+      <div class="card">
+        <h2>Aktualizace z GitHubu</h2>
+        <table class="kv">
+          <tr><th>Nainstalovaná verze</th><td id="upd-version"></td></tr>
+          <tr><th>Nejnovější na GitHubu</th><td id="upd-latest"></td></tr>
+          <tr><th>Commit</th><td id="upd-commit" class="mono"></td></tr>
+          <tr><th>Repozitář</th><td id="upd-repo" class="mono"></td></tr>
+          <tr><th>Naposledy zkontrolováno</th><td id="upd-checked"></td></tr>
+        </table>
+        <div class="actions"><button id="upd-check" class="ghost">Zkontrolovat teď</button>
+        <button id="upd-run">Nainstalovat aktualizaci</button>
+        <button id="btn-apply" class="ghost">Znovu použít konfiguraci</button></div>
+        <pre id="upd-log" class="console">–</pre>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>

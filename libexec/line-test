@@ -1,0 +1,53 @@
+#!/usr/bin/python3
+# Spouští mgetty, když volající nepošle PPP, ale napíše jméno na výzvu "login:".
+# Režim "echo": testovací ozvěna pro ověření kvality linky z terminálu.
+# Režim "deny": jen oznámí, že linka je pouze pro PPP, a zavěsí.
+import os
+import select
+import sys
+import time
+
+mode = sys.argv[1] if len(sys.argv) > 1 else "deny"
+out = sys.stdout.buffer
+inp = sys.stdin.buffer
+
+
+def say(text):
+    out.write(text.replace("\n", "\r\n").encode("ascii", "replace"))
+    out.flush()
+
+
+connect = os.environ.get("CONNECT", "?")
+
+if mode != "echo":
+    say("\npitel: tato linka prijima jen PPP spojeni.\n")
+    time.sleep(2)
+    sys.exit(0)
+
+say(
+    "\n=== pitel: test linky ===\n"
+    f"Spojeni: {connect}\n"
+    "Napis radek textu a Enter, vrati se zpet i s poctem znaku.\n"
+    "Ukonceni: napis 'konec' nebo Ctrl+D. Po 5 minutach necinnosti zavesim.\n\n"
+)
+
+lines = chars = 0
+start = time.time()
+while True:
+    say("> ")
+    r, _, _ = select.select([inp], [], [], 300)
+    if not r:
+        say("\nNecinnost, zavesuji.\n")
+        break
+    data = inp.readline()
+    if not data:
+        break
+    text = data.decode("latin-1").rstrip("\r\n")
+    if text.strip().lower() in ("konec", "exit", "quit"):
+        break
+    lines += 1
+    chars += len(text)
+    say(f"echo [{len(text)}]: {text}\n")
+
+say(f"\nPrijato {lines} radku / {chars} znaku za {int(time.time() - start)} s. Nashledanou.\n")
+time.sleep(1)

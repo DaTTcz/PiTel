@@ -1,0 +1,20 @@
+#!/usr/bin/python3
+# pppd: ip-up-script. Argumenty: iface tty speed local-ip remote-ip ipparam
+# Prostředí: PEERNAME (jméno ověřeného uživatele)
+import os
+import sys
+import time
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+from pitel import paths  # noqa: E402
+from pitel.util import write_json  # noqa: E402
+
+a = sys.argv[1:] + [""] * 6
+write_json(paths.SESSION, {
+    "iface": a[0],
+    "tty": a[1],
+    "local": a[3],
+    "remote": a[4],
+    "peer": os.environ.get("PEERNAME") or None,
+    "started": int(time.time()),
+}, 0o644)

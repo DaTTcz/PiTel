@@ -1,0 +1,22 @@
+#!/usr/bin/python3
+# pppd: ip-down-script. Prostředí: CONNECT_TIME, BYTES_SENT, BYTES_RCVD, PEERNAME
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+from pitel import paths  # noqa: E402
+from pitel.util import read_json, write_json  # noqa: E402
+
+sess = read_json(paths.SESSION, {}) or {}
+sess.update({
+    "connect_time": int(os.environ.get("CONNECT_TIME") or 0),
+    "bytes_sent": int(os.environ.get("BYTES_SENT") or 0),
+    "bytes_rcvd": int(os.environ.get("BYTES_RCVD") or 0),
+})
+if os.environ.get("PEERNAME"):
+    sess["peer"] = os.environ["PEERNAME"]
+write_json(paths.LAST_SESSION, sess, 0o644)
+try:
+    os.unlink(paths.SESSION)
+except FileNotFoundError:
+    pass
